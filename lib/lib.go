@@ -11,6 +11,9 @@ import (
 //go:embed teams.json
 var teams []byte
 
+// NOTE: balldontlie free tier gives access to Teams, Players, Games,
+// at 5 req/min. https://www.balldontlie.io/#pricing
+
 type Team struct {
 	Id           int    `json:"id"`
 	Conference   string `json:"conference"`
