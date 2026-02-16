@@ -59,6 +59,7 @@ to quickly create a Cobra application.`,
 		for _, t := range teams {
 			if strings.ToLower(t.Name) == query || strings.ToLower(t.City) == query || strings.ToLower(t.Abbreviation) == query {
 				fmt.Println(t)
+				fmt.Println(lib.GetGamesForTeam(t))
 				return
 			}
 		}
