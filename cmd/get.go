@@ -9,7 +9,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
+	"github.com/andyyoon2/whats-the-score/lib"
 	"github.com/spf13/cobra"
 )
 
@@ -46,7 +48,23 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		get()
+		fmt.Println(args)
+		teams := lib.GetTeams()
+		if len(args) == 0 {
+			fmt.Println(teams)
+			return
+		}
+
+		query := strings.ToLower(args[0])
+		for _, t := range teams {
+			if strings.ToLower(t.Name) == query || strings.ToLower(t.City) == query || strings.ToLower(t.Abbreviation) == query {
+				fmt.Println(t)
+				return
+			}
+		}
+
+		fmt.Println("Team not found!")
+		os.Exit(1)
 	},
 }
 
