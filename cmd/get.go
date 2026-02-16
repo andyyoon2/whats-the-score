@@ -5,36 +5,27 @@ package cmd
 
 import (
 	"fmt"
-	"io"
-	"log"
-	"net/http"
-	"os"
+	"strconv"
 	"strings"
 
 	"github.com/andyyoon2/whats-the-score/lib"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 )
 
-func get() {
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", "https://api.balldontlie.io/v1/teams/", nil)
-	if err != nil {
-		log.Fatal(err)
+func renderGame(g lib.Game) {
+	boldStyle := lipgloss.NewStyle().Bold(true)
+	homeScore := strconv.Itoa(g.HomeTeamScore)
+	visitorScore := strconv.Itoa(g.VisitorTeamScore)
+	if g.Status == "Final" {
+		if g.HomeTeamScore > g.VisitorTeamScore {
+			homeScore = boldStyle.Render(homeScore)
+		} else {
+			visitorScore = boldStyle.Render(visitorScore)
+		}
 	}
 
-	req.Header.Add("Authorization", os.Getenv("WTS_API_KEY"))
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println(string(body))
+	fmt.Printf("%s: %s %s-%s %s\n", g.Date, g.VisitorTeam.Abbreviation, visitorScore, homeScore, g.HomeTeam.Abbreviation)
 }
 
 // getCmd represents the get command
@@ -48,24 +39,27 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println(args)
+		var games []lib.Game
 		teams := lib.GetTeams()
 		if len(args) == 0 {
-			fmt.Println(teams)
-			return
-		}
-
-		query := strings.ToLower(args[0])
-		for _, t := range teams {
-			if strings.ToLower(t.Name) == query || strings.ToLower(t.City) == query || strings.ToLower(t.Abbreviation) == query {
-				fmt.Println(t)
-				fmt.Println(lib.GetGamesForTeam(t))
-				return
+			games = lib.GetGames()
+		} else {
+			query := strings.ToLower(args[0])
+			for _, t := range teams {
+				if strings.ToLower(t.Name) == query || strings.ToLower(t.City) == query || strings.ToLower(t.Abbreviation) == query {
+					games = lib.GetGamesForTeam(t)
+				}
 			}
 		}
 
-		fmt.Println("Team not found!")
-		os.Exit(1)
+		if len(games) == 0 {
+			fmt.Println("No recent games found")
+			return
+		}
+
+		for _, g := range games {
+			renderGame(g)
+		}
 	},
 }
 

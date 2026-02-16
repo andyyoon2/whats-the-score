@@ -79,16 +79,15 @@ func GetTeams() []Team {
 	return t
 }
 
-func GetGamesForTeam(team Team) []Game {
+// Build query parameters for API request
+// TODO: This doesn't quite work always to get the latest games, but it's good enough for now
+func buildDateRanges() (string, string, string) {
 	// NOTE: When formatting strings, you need to describe the reference date
 	// https://pkg.go.dev/time#example-Time.Format
 	//	Jan 2 15:04:05 2006 MST
 	// An easy way to remember this value is that it holds, when presented
 	// in this order, the values (lined up with the elements above):
 	//	  1 2  3  4  5    6  -7
-	teamIds := fmt.Sprintf("team_ids[]=%d", team.Id)
-
-	// TODO: This doesn't quite work always to get the latest games, but it's good enough for now
 	today := time.Now()
 	lastWeek := today.AddDate(0, 0, -7)
 	startDate := fmt.Sprintf("start_date=%s", lastWeek.Format("2006-01-02"))
@@ -101,7 +100,10 @@ func GetGamesForTeam(team Team) []Game {
 	}
 	season := fmt.Sprintf("seasons[]=%d", todayYear)
 
-	path := fmt.Sprintf("/games?%s&%s&%s&%s", teamIds, season, startDate, endDate)
+	return startDate, endDate, season
+}
+
+func fetchGames(path string) []Game {
 	data := Get(path)
 
 	var g ListResponse[Game]
@@ -111,4 +113,19 @@ func GetGamesForTeam(team Team) []Game {
 	}
 
 	return g.Data
+}
+
+func GetGames() []Game {
+	startDate, endDate, season := buildDateRanges()
+
+	path := fmt.Sprintf("/games?%s&%s&%s", startDate, endDate, season)
+	return fetchGames(path)
+}
+
+func GetGamesForTeam(team Team) []Game {
+	teamIds := fmt.Sprintf("team_ids[]=%d", team.Id)
+	startDate, endDate, season := buildDateRanges()
+
+	path := fmt.Sprintf("/games?%s&%s&%s&%s", teamIds, startDate, endDate, season)
+	return fetchGames(path)
 }
