@@ -5,16 +5,33 @@ package cmd
 
 import (
 	"fmt"
+	// "log"
 	"strings"
+	// "time"
 
 	"github.com/andyyoon2/whats-the-score/lib"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/lipgloss/table"
 	"github.com/spf13/cobra"
 )
 
+var (
+	tableRowStyle     = lipgloss.NewStyle().Padding(0, 1)
+	tableHeadingStyle = tableRowStyle.Foreground(lipgloss.Color("250"))
+	teamColStyle      = tableRowStyle.Width(24) // Longest team name (22) plus padding
+	dateCellStyle     = tableHeadingStyle.Width(24)
+	boldStyle         = lipgloss.NewStyle().Bold(true)
+)
+
 func renderGame(g lib.Game) {
-	boldStyle := lipgloss.NewStyle().Bold(true)
-	homeScore := fmt.Sprintf("%-3d", g.HomeTeamScore) // left-justify home score
+	// TODO: Parse datetime, but need user's timezone info?
+	// datetime, err := time.Parse(time.RFC3339, g.Datetime)
+	// if err != nil {
+	// 	log.Printf("[warning] Unable to parse date %s, %v", g.Datetime, err)
+	// 	datetime = g.Date
+	// }
+
+	homeScore := fmt.Sprintf("%3d", g.HomeTeamScore)
 	visitorScore := fmt.Sprintf("%3d", g.VisitorTeamScore)
 	if g.Status == "Final" {
 		if g.HomeTeamScore > g.VisitorTeamScore {
@@ -24,7 +41,26 @@ func renderGame(g lib.Game) {
 		}
 	}
 
-	fmt.Printf("%s: %s %s - %s %s\n", g.Date, g.VisitorTeam.Abbreviation, visitorScore, homeScore, g.HomeTeam.Abbreviation)
+	rows := [][]string{
+		{g.Date, g.Status},
+		{g.VisitorTeam.FullName, visitorScore},
+		{g.HomeTeam.FullName, homeScore},
+	}
+	t := table.New().StyleFunc(func(row, col int) lipgloss.Style {
+		if row == 0 {
+			if col == 0 {
+				return dateCellStyle
+			} else {
+				return tableHeadingStyle
+			}
+		}
+		if col == 0 {
+			return teamColStyle
+		}
+		return tableRowStyle
+	}).Rows(rows...)
+
+	fmt.Println(t)
 }
 
 // getCmd represents the get command
