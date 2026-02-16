@@ -5,7 +5,6 @@ package cmd
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/andyyoon2/whats-the-score/lib"
@@ -15,8 +14,8 @@ import (
 
 func renderGame(g lib.Game) {
 	boldStyle := lipgloss.NewStyle().Bold(true)
-	homeScore := strconv.Itoa(g.HomeTeamScore)
-	visitorScore := strconv.Itoa(g.VisitorTeamScore)
+	homeScore := fmt.Sprintf("%-3d", g.HomeTeamScore) // left-justify home score
+	visitorScore := fmt.Sprintf("%3d", g.VisitorTeamScore)
 	if g.Status == "Final" {
 		if g.HomeTeamScore > g.VisitorTeamScore {
 			homeScore = boldStyle.Render(homeScore)
@@ -25,7 +24,7 @@ func renderGame(g lib.Game) {
 		}
 	}
 
-	fmt.Printf("%s: %s %s-%s %s\n", g.Date, g.VisitorTeam.Abbreviation, visitorScore, homeScore, g.HomeTeam.Abbreviation)
+	fmt.Printf("%s: %s %s - %s %s\n", g.Date, g.VisitorTeam.Abbreviation, visitorScore, homeScore, g.HomeTeam.Abbreviation)
 }
 
 // getCmd represents the get command
