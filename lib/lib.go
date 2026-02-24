@@ -106,6 +106,29 @@ func buildDateRanges(lookback int) (string, string, string) {
 	return startDate, endDate, season
 }
 
+// Return today in YYYY-MM-DD format
+func getTodayDate() string {
+	return time.Now().Format("2006-01-02")
+}
+
+// Returns today+offsetDays in YYYY-MM-DD format
+func getTodayPlusOffsetDate(offsetDays int) string {
+	today := time.Now()
+	offsetDate := today.AddDate(0, 0, offsetDays)
+
+	return offsetDate.Format("2006-01-02")
+}
+
+// Handle season param: Season typically starts in Oct and ends in June
+func getSeason() int {
+	today := time.Now()
+	todayYear, todayMonth, _ := today.Date()
+	if todayMonth < time.August {
+		todayYear -= 1
+	}
+	return todayYear
+}
+
 func fetchGames(path string) []Game {
 	data := Get(path)
 
@@ -116,6 +139,12 @@ func fetchGames(path string) []Game {
 	}
 
 	return g.Data
+}
+
+// Fetch today's games for all teams
+func GetUpcomingGames() []Game {
+	path := fmt.Sprintf("/games?dates[]=%s", getTodayDate())
+	return fetchGames(path)
 }
 
 func GetGames() []Game {

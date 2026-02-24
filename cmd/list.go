@@ -102,7 +102,8 @@ to quickly create a Cobra application.`,
 		var games []lib.Game
 		teams := lib.GetTeams()
 		if len(args) == 0 {
-			games = lib.GetGames()
+			// games = lib.GetGames()
+			games = lib.GetUpcomingGames()
 		} else {
 			query := strings.ToLower(args[0])
 			for _, t := range teams {
