@@ -44,20 +44,18 @@ func renderGame(g lib.Game) {
 
 	// Display the game datetime.
 	var timeDisplay string
-	if g.Period == 0 {
-		// Game hasn't started yet, show the start time
-		datetime, err := time.Parse(time.RFC3339, g.Datetime)
-		if err != nil {
-			log.Printf("[warning] Unable to parse date %s, %v", g.Datetime, err)
-			timeDisplay = g.Date
-		}
+	datetime, err := time.Parse(time.RFC3339, g.Datetime)
+	if err != nil {
+		log.Printf("[warning] Unable to parse date %s, %v", g.Datetime, err)
+		timeDisplay = g.Date
+	} else {
+		timeDisplay = datetime.Local().Format("Mon Jan 02 03:04 PM")
+	}
 
-		timeDisplay = datetime.Local().Format("2006-01-02 03:04 PM")
+	// Hide scores if game hasn't started yet
+	if g.Period == 0 {
 		homeScore = ""
 		visitorScore = ""
-	} else {
-		// Game is in progress or has ended
-		timeDisplay = g.Date
 	}
 
 	rows := [][]string{
@@ -108,7 +106,8 @@ to quickly create a Cobra application.`,
 			query := strings.ToLower(args[0])
 			for _, t := range teams {
 				if strings.ToLower(t.Name) == query || strings.ToLower(t.City) == query || strings.ToLower(t.Abbreviation) == query {
-					games = lib.GetGamesForTeam(t)
+					// games = lib.GetGamesForTeam(t)
+					games = lib.GetUpcomingGamesForTeam(t)
 				}
 			}
 		}

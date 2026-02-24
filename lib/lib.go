@@ -147,6 +147,13 @@ func GetUpcomingGames() []Game {
 	return fetchGames(path)
 }
 
+// Fetch upcoming games for single team
+// TODO: Could support multiple teams here
+func GetUpcomingGamesForTeam(team Team) []Game {
+	path := fmt.Sprintf("/games?team_ids[]=%d&start_date=%s&per_page=3", team.Id, getTodayDate())
+	return fetchGames(path)
+}
+
 func GetGames() []Game {
 	startDate, endDate, season := buildDateRanges(1)
 
