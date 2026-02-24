@@ -6,34 +6,43 @@ package cmd
 import (
 	"fmt"
 	"log"
+	"os"
 	"strings"
 	"time"
 
+	"charm.land/lipgloss/v2"
+	"charm.land/lipgloss/v2/table"
 	"github.com/andyyoon2/whats-the-score/lib"
-	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/lipgloss/table"
 	"github.com/spf13/cobra"
 )
 
 var (
+	hasDarkBG         = lipgloss.HasDarkBackground(os.Stdin, os.Stdout)
+	lightDark         = lipgloss.LightDark(hasDarkBG)
 	tableRowStyle     = lipgloss.NewStyle().Padding(0, 1)
-	tableHeadingStyle = tableRowStyle.Foreground(lipgloss.Color("250"))
+	tableHeadingStyle = tableRowStyle.Foreground(lightDark(lipgloss.Color("243"), lipgloss.Color("250")))
 	teamColStyle      = tableRowStyle.Width(24) // Longest team name (22) plus padding
 	dateCellStyle     = tableHeadingStyle.Width(24)
 	boldStyle         = lipgloss.NewStyle().Bold(true)
 )
 
 func renderGame(g lib.Game) {
+	// Bold the winner if the game has ended.
 	homeScore := fmt.Sprintf("%3d", g.HomeTeamScore)
+	homeTeam := g.HomeTeam.FullName
 	visitorScore := fmt.Sprintf("%3d", g.VisitorTeamScore)
+	visitorTeam := g.VisitorTeam.FullName
 	if g.Status == "Final" {
 		if g.HomeTeamScore > g.VisitorTeamScore {
 			homeScore = boldStyle.Render(homeScore)
+			homeTeam = boldStyle.Render(homeTeam)
 		} else {
 			visitorScore = boldStyle.Render(visitorScore)
+			visitorTeam = boldStyle.Render(visitorTeam)
 		}
 	}
 
+	// Display the game datetime.
 	var timeDisplay string
 	if g.Period == 0 {
 		// Game hasn't started yet, show the start time
@@ -43,29 +52,37 @@ func renderGame(g lib.Game) {
 			timeDisplay = g.Date
 		}
 
-		timeDisplay = datetime.Local().Format("03:04 PM MST")
+		timeDisplay = datetime.Local().Format("2006-01-02 03:04 PM")
+		homeScore = ""
+		visitorScore = ""
 	} else {
-		timeDisplay = g.Time
+		// Game is in progress or has ended
+		timeDisplay = g.Date
 	}
 
 	rows := [][]string{
-		{g.Date, timeDisplay},
-		{g.VisitorTeam.FullName, visitorScore},
-		{g.HomeTeam.FullName, homeScore},
+		{timeDisplay, g.Time},
+		{visitorTeam, visitorScore},
+		{homeTeam, homeScore},
 	}
-	t := table.New().StyleFunc(func(row, col int) lipgloss.Style {
-		if row == 0 {
-			if col == 0 {
-				return dateCellStyle
-			} else {
-				return tableHeadingStyle
+	t := table.New().
+		Border(lipgloss.RoundedBorder()).
+		BorderColumn(false).
+		StyleFunc(func(row, col int) lipgloss.Style {
+			if row == 0 {
+				if col == 0 {
+					// return tableHeadingStyle
+					return dateCellStyle
+				} else {
+					return tableHeadingStyle
+				}
 			}
-		}
-		if col == 0 {
-			return teamColStyle
-		}
-		return tableRowStyle
-	}).Rows(rows...)
+			if col == 0 {
+				return teamColStyle
+			}
+			return tableRowStyle
+		}).
+		Rows(rows...)
 
 	fmt.Println(t)
 }
