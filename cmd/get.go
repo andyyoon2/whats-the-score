@@ -42,7 +42,7 @@ func renderGame(g lib.Game) {
 	}
 
 	rows := [][]string{
-		{g.Date, g.Status},
+		{g.Date, g.Time},
 		{g.VisitorTeam.FullName, visitorScore},
 		{g.HomeTeam.FullName, homeScore},
 	}
