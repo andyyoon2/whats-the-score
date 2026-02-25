@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -17,68 +18,96 @@ import (
 )
 
 var (
-	hasDarkBG         = lipgloss.HasDarkBackground(os.Stdin, os.Stdout)
-	lightDark         = lipgloss.LightDark(hasDarkBG)
-	tableRowStyle     = lipgloss.NewStyle().Padding(0, 1)
-	tableHeadingStyle = tableRowStyle.Foreground(lightDark(lipgloss.Color("243"), lipgloss.Color("250")))
-	teamColStyle      = tableRowStyle.Width(24) // Longest team name (22) plus padding
-	dateCellStyle     = tableHeadingStyle.Width(24)
-	boldStyle         = lipgloss.NewStyle().Bold(true)
+	hasDarkBG           = lipgloss.HasDarkBackground(os.Stdin, os.Stdout)
+	lightDark           = lipgloss.LightDark(hasDarkBG)
+	pxStyle             = lipgloss.NewStyle().Padding(0, 1)
+	rightTableCellStyle = pxStyle.Align(lipgloss.Center)
+	secondaryTextStyle  = lipgloss.NewStyle().Foreground(lightDark(lipgloss.Color("243"), lipgloss.Color("250")))
+	tableHeadingStyle   = pxStyle.Foreground(lightDark(lipgloss.Color("243"), lipgloss.Color("250")))
+	rightColumnStyle    = tableHeadingStyle.Align(lipgloss.Center)
+	teamCellStyle       = lipgloss.NewStyle().Width(24) // Longest team name (22) plus padding
+	dateCellStyle       = tableHeadingStyle.Width(24)
+	boldStyle           = lipgloss.NewStyle().Bold(true)
 )
 
-func renderGame(g lib.Game) {
+func renderGame(g lib.Game) []string {
+	var homeScore string
+	var visitorScore string
+	// Hide scores if game hasn't started yet. Align it with 3-digit scores
+	if g.Period == 0 {
+		homeScore = "   "
+		visitorScore = "   "
+	} else {
+		homeScore = fmt.Sprintf("%3d", g.HomeTeamScore)
+		visitorScore = fmt.Sprintf("%3d", g.VisitorTeamScore)
+	}
+
+	home := teamCellStyle.Render(g.HomeTeam.FullName) + homeScore
+	visitor := teamCellStyle.Render(g.VisitorTeam.FullName) + visitorScore
+
 	// Bold the winner if the game has ended.
-	homeScore := fmt.Sprintf("%3d", g.HomeTeamScore)
-	homeTeam := g.HomeTeam.FullName
-	visitorScore := fmt.Sprintf("%3d", g.VisitorTeamScore)
-	visitorTeam := g.VisitorTeam.FullName
 	if g.Status == "Final" {
 		if g.HomeTeamScore > g.VisitorTeamScore {
-			homeScore = boldStyle.Render(homeScore)
-			homeTeam = boldStyle.Render(homeTeam)
+			home = boldStyle.Render(home)
 		} else {
-			visitorScore = boldStyle.Render(visitorScore)
-			visitorTeam = boldStyle.Render(visitorTeam)
+			visitor = boldStyle.Render(visitor)
 		}
 	}
 
-	// Display the game datetime.
-	var timeDisplay string
+	// Display the game date.
+	var dateDisplay string
 	datetime, err := time.Parse(time.RFC3339, g.Datetime)
 	if err != nil {
 		log.Printf("[warning] Unable to parse date %s, %v", g.Datetime, err)
-		timeDisplay = g.Date
+		dateDisplay = g.Date
 	} else {
-		timeDisplay = datetime.Local().Format("Mon Jan 02 03:04 PM")
+		dateDisplay = datetime.Local().Format("Mon Jan 02")
 	}
 
-	// Hide scores if game hasn't started yet
-	if g.Period == 0 {
-		homeScore = ""
-		visitorScore = ""
+	// Display the game time.
+	var timeDisplay string
+	if g.Status == "Final" {
+		// Game is ended, check for OTs
+		timeDisplay = "Final"
+		if g.Period > 4 {
+			timeDisplay += "/OT"
+		}
+		if g.Period > 5 {
+			timeDisplay += strconv.Itoa(g.Period - 4)
+		}
+	} else if g.Period == 0 {
+		// Game hasn't started
+		timeDisplay = datetime.Local().Format("03:04 PM")
+	} else {
+		// Game in progress
+		timeDisplay = g.Time
 	}
 
-	rows := [][]string{
-		{timeDisplay, g.Time},
-		{visitorTeam, visitorScore},
-		{homeTeam, homeScore},
-	}
+	// Return strings to be rendered in a single table row
+	return []string{visitor + "\n" + home, timeDisplay + "\n" + dateDisplay}
+}
+
+func renderGamesTable(rows [][]string) {
+	// rows := [][]string{
+	// 	{visitor, timeDisplay},
+	// 	{home, dateDisplay},
+	// }
 	t := table.New().
 		Border(lipgloss.RoundedBorder()).
 		BorderColumn(false).
 		StyleFunc(func(row, col int) lipgloss.Style {
 			if row == 0 {
 				if col == 0 {
-					// return tableHeadingStyle
-					return dateCellStyle
+					return pxStyle
 				} else {
-					return tableHeadingStyle
+					return rightColumnStyle
 				}
 			}
 			if col == 0 {
-				return teamColStyle
+				return pxStyle.BorderStyle(lipgloss.NormalBorder()).BorderTop(true)
+			} else {
+				return rightColumnStyle.BorderStyle(lipgloss.NormalBorder()).BorderTop(true)
 			}
-			return tableRowStyle
 		}).
 		Rows(rows...)
 
@@ -117,9 +146,12 @@ to quickly create a Cobra application.`,
 			return
 		}
 
+		var rows [][]string
 		for _, g := range games {
-			renderGame(g)
+			rows = append(rows, renderGame(g))
 		}
+
+		renderGamesTable(rows)
 	},
 }
 
