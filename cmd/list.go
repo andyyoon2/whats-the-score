@@ -34,20 +34,20 @@ func renderGame(g lib.Game) []string {
 	var homeScore string
 	var visitorScore string
 	// Hide scores if game hasn't started yet. Align it with 3-digit scores
-	if g.Period == 0 {
+	if g.GetPeriod() == 0 {
 		homeScore = "   "
 		visitorScore = "   "
 	} else {
-		homeScore = fmt.Sprintf("%3d", g.HomeTeamScore)
-		visitorScore = fmt.Sprintf("%3d", g.VisitorTeamScore)
+		homeScore = fmt.Sprintf("%3d", g.GetHomeTeamScore())
+		visitorScore = fmt.Sprintf("%3d", g.GetVisitorTeamScore())
 	}
 
-	home := teamCellStyle.Render(g.HomeTeam.FullName) + homeScore
-	visitor := teamCellStyle.Render(g.VisitorTeam.FullName) + visitorScore
+	home := teamCellStyle.Render(g.GetHomeTeamName()) + homeScore
+	visitor := teamCellStyle.Render(g.GetVisitorTeamName()) + visitorScore
 
 	// Bold the winner if the game has ended.
-	if g.Status == "Final" {
-		if g.HomeTeamScore > g.VisitorTeamScore {
+	if g.GetStatus() == "Final" {
+		if g.GetHomeTeamScore() > g.GetVisitorTeamScore() {
 			home = boldStyle.Render(home)
 		} else {
 			visitor = boldStyle.Render(visitor)
@@ -56,31 +56,31 @@ func renderGame(g lib.Game) []string {
 
 	// Display the game date.
 	var dateDisplay string
-	datetime, err := time.Parse(time.RFC3339, g.Datetime)
+	datetime, err := time.Parse(time.RFC3339, g.GetDatetime())
 	if err != nil {
-		log.Printf("[warning] Unable to parse date %s, %v", g.Datetime, err)
-		dateDisplay = g.Date
+		log.Printf("[warning] Unable to parse date %s, %v", g.GetDatetime(), err)
+		dateDisplay = g.GetDatetime()
 	} else {
 		dateDisplay = datetime.Local().Format("Mon Jan 02")
 	}
 
 	// Display the game time.
 	var timeDisplay string
-	if g.Status == "Final" {
+	if g.GetStatus() == "Final" {
 		// Game is ended, check for OTs
 		timeDisplay = "Final"
-		if g.Period > 4 {
+		if g.GetPeriod() > 4 {
 			timeDisplay += "/OT"
 		}
-		if g.Period > 5 {
-			timeDisplay += strconv.Itoa(g.Period - 4)
+		if g.GetPeriod() > 5 {
+			timeDisplay += strconv.Itoa(g.GetPeriod() - 4)
 		}
-	} else if g.Period == 0 {
+	} else if g.GetPeriod() == 0 {
 		// Game hasn't started
 		timeDisplay = datetime.Local().Format("03:04 PM")
 	} else {
 		// Game in progress
-		timeDisplay = g.Time
+		timeDisplay = g.GetInGameTime()
 	}
 
 	// Return strings to be rendered in a single table row
@@ -126,15 +126,20 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		league := cmd.Flag("league").Value.String()
+		teams, err := lib.GetTeams(league)
+		if err != nil {
+			log.Fatalf("Error loading teams for league %s: %v", league, err)
+		}
+
 		var games []lib.Game
-		teams := lib.GetTeams()
 		if len(args) == 0 {
 			// games = lib.GetGames()
 			games = lib.GetUpcomingGames()
 		} else {
 			query := strings.ToLower(args[0])
 			for _, t := range teams {
-				if strings.ToLower(t.Name) == query || strings.ToLower(t.City) == query || strings.ToLower(t.Abbreviation) == query {
+				if strings.ToLower(t.GetName()) == query || strings.ToLower(t.GetLocation()) == query || strings.ToLower(t.GetAbbreviation()) == query {
 					// games = lib.GetGamesForTeam(t)
 					games = lib.GetUpcomingGamesForTeam(t)
 				}
@@ -166,5 +171,7 @@ func init() {
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	// listCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+
+	// TODO: Support searching in all leagues if not given. We default somewhat arbitrarily to NBA.
+	listCmd.Flags().StringP("league", "l", "nba", "Filter games by league")
 }
