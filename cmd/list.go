@@ -105,7 +105,14 @@ For example, all of these commands will resolve to Los Angeles Lakers:
 If no league is given, we default somewhat arbitrarily to NBA.
 Currently supported leagues are: NBA, MLB. (case-insensitive)`,
 	Run: func(cmd *cobra.Command, args []string) {
-		league := cmd.Flag("league").Value.String()
+		league, err := cmd.Flags().GetString("league")
+		if err != nil {
+			log.Fatalf("Parsing error: %v", err)
+		}
+		history, err := cmd.Flags().GetBool("history")
+		if err != nil {
+			log.Fatalf("Parsing error: %v", err)
+		}
 
 		provider, err := lib.NewProvider(league)
 		if err != nil {
@@ -119,8 +126,11 @@ Currently supported leagues are: NBA, MLB. (case-insensitive)`,
 
 		var games []lib.Game
 		if len(args) == 0 {
-			// games = lib.GetGames()
-			games, err = provider.UpcomingGames()
+			if history {
+				games, err = provider.HistoricalGames()
+			} else {
+				games, err = provider.UpcomingGames()
+			}
 			if err != nil {
 				log.Fatalf("Error loading games: %v", err)
 			}
@@ -130,8 +140,11 @@ Currently supported leagues are: NBA, MLB. (case-insensitive)`,
 			query := strings.ToLower(args[0])
 			for _, t := range teams {
 				if strings.ToLower(t.GetName()) == query || strings.ToLower(t.GetLocation()) == query || strings.ToLower(t.GetAbbreviation()) == query {
-					// games = lib.GetGamesForTeam(t)
-					games, err = provider.UpcomingGamesForTeam(t)
+					if history {
+						games, err = provider.HistoricalGamesForTeam(t)
+					} else {
+						games, err = provider.UpcomingGamesForTeam(t)
+					}
 					if err != nil {
 						log.Fatalf("Error loading games: %v", err)
 					}
@@ -168,6 +181,8 @@ func init() {
 	// TODO: Support searching in all leagues if not given. We default somewhat arbitrarily to NBA.
 	listCmd.Flags().StringP("league", "l", "nba", "Filter games by league")
 
-	listCmd.Flags().StringP("history", "H", "", "List historical games")
-	listCmd.Flags().StringP("limit", "n", "", "Number of games to list (default all for league, 3 for team)")
+	// TODO: Implement these
+	listCmd.Flags().BoolP("history", "H", false, "List historical games")
+	// listCmd.Flags().StringP("limit", "n", "", "Number of games to list (default all for league, 3 for team)")
+	// some sort of date filter. Either number of days or a date range.
 }

@@ -355,8 +355,11 @@ func (g MlbGame) DisplayScore(t string) string {
 
 type LeagueProvider interface {
 	Teams() ([]Team, error)
+	CurrentSeason() int
 	UpcomingGames() ([]Game, error)
 	UpcomingGamesForTeam(team Team) ([]Game, error)
+	HistoricalGames() ([]Game, error)
+	HistoricalGamesForTeam(team Team) ([]Game, error)
 }
 
 type NbaProvider struct{}
@@ -371,6 +374,16 @@ func (p NbaProvider) Teams() ([]Team, error) {
 		teams[i] = t
 	}
 	return teams, nil
+}
+
+// Handle season param: Season typically starts in Oct and ends in June
+func (p NbaProvider) CurrentSeason() int {
+	today := time.Now()
+	todayYear, todayMonth, _ := today.Date()
+	if todayMonth < time.August {
+		todayYear -= 1
+	}
+	return todayYear
 }
 
 func (p NbaProvider) UpcomingGames() ([]Game, error) {
@@ -393,6 +406,37 @@ func (p NbaProvider) UpcomingGamesForTeam(team Team) ([]Game, error) {
 	return games, nil
 }
 
+func (p NbaProvider) HistoricalGames() ([]Game, error) {
+	// BALLDONTLIE doesn't let us sort by date desc. So we just get the last 2 days as a rough estimate.
+	startDate := getTodayPlusOffsetDate(-2)
+	endDate := getTodayDate()
+	season := p.CurrentSeason()
+
+	path := fmt.Sprintf("/v1/games?start_date=%s&end_date=%s&seasons[]=%d", startDate, endDate, season)
+	gs := fetchNbaGames(path)
+	games := make([]Game, len(gs))
+	for i, g := range gs {
+		games[i] = g
+	}
+	return games, nil
+}
+
+func (p NbaProvider) HistoricalGamesForTeam(t Team) ([]Game, error) {
+	// BALLDONTLIE doesn't let us sort by date desc. So we just get the last 7 days as a rough estimate.
+	startDate := getTodayPlusOffsetDate(-7)
+	endDate := getTodayDate()
+	season := p.CurrentSeason()
+
+	path := fmt.Sprintf("/v1/games?team_ids[]=%d&start_date=%s&end_date=%s&seasons[]=%d", t.GetId(), startDate, endDate, season)
+	gs := fetchNbaGames(path)
+	games := make([]Game, len(gs))
+	for i, g := range gs {
+		games[i] = g
+	}
+	return games, nil
+}
+
+// TODO: Pass up error, follow the same patterns
 func fetchNbaGames(path string) []NbaGame {
 	data := Get(path)
 
@@ -419,6 +463,12 @@ func (p MlbProvider) Teams() ([]Team, error) {
 	return teams, nil
 }
 
+func (p MlbProvider) CurrentSeason() int {
+	today := time.Now()
+	todayYear, _, _ := today.Date()
+	return todayYear
+}
+
 func (p MlbProvider) UpcomingGames() ([]Game, error) {
 	path := fmt.Sprintf("/mlb/v1/games?dates[]=%s", getTodayDate())
 	gs := fetchMlbGames(path)
@@ -436,12 +486,38 @@ func (p MlbProvider) UpcomingGamesForTeam(team Team) ([]Game, error) {
 	for i := 1; i < nDays; i++ {
 		days = append(days, getTodayPlusOffsetDate(i))
 	}
-	fmt.Println(days)
 	daysParam := "dates[]=" + strings.Join(days, "&dates[]=")
-	fmt.Println(daysParam)
 
 	path := fmt.Sprintf("/mlb/v1/games?team_ids[]=%d&%s", team.GetId(), daysParam)
 	fmt.Println("Requesting path: " + path)
+	gs := fetchMlbGames(path)
+	games := make([]Game, len(gs))
+	for i, g := range gs {
+		games[i] = g
+	}
+	return games, nil
+}
+
+func (p MlbProvider) HistoricalGames() ([]Game, error) {
+	// BALLDONTLIE doesn't let us sort by date desc. So we just get the last 2 days as a rough estimate.
+	dateQueryParam := makeMlbDateRangeQueryParam(-2, 2)
+	season := p.CurrentSeason()
+
+	path := fmt.Sprintf("/mlb/v1/games?%s&seasons[]=%d", dateQueryParam, season)
+	gs := fetchMlbGames(path)
+	games := make([]Game, len(gs))
+	for i, g := range gs {
+		games[i] = g
+	}
+	return games, nil
+}
+
+func (p MlbProvider) HistoricalGamesForTeam(t Team) ([]Game, error) {
+	// BALLDONTLIE doesn't let us sort by date desc. So we just get the last 7 days as a rough estimate.
+	dateQueryParam := makeMlbDateRangeQueryParam(-7, 7)
+	season := p.CurrentSeason()
+
+	path := fmt.Sprintf("/mlb/v1/games?team_ids[]=%d&%s&seasons[]=%d", t.GetId(), dateQueryParam, season)
 	gs := fetchMlbGames(path)
 	games := make([]Game, len(gs))
 	for i, g := range gs {
@@ -501,6 +577,16 @@ func buildDateRanges(lookback int) (string, string, string) {
 	return startDate, endDate, season
 }
 
+// To query MLB date ranges, we have to pass each date one at a time.
+func makeMlbDateRangeQueryParam(startOffsetFromToday int, numDays int) string {
+	days := make([]string, 0, numDays)
+	days = append(days, getTodayPlusOffsetDate(startOffsetFromToday))
+	for i := 1; i < numDays; i++ {
+		days = append(days, getTodayPlusOffsetDate(startOffsetFromToday+i))
+	}
+	return "dates[]=" + strings.Join(days, "&dates[]=")
+}
+
 // Return today in YYYY-MM-DD format
 func getTodayDate() string {
 	return time.Now().Format("2006-01-02")
@@ -512,16 +598,6 @@ func getTodayPlusOffsetDate(offsetDays int) string {
 	offsetDate := today.AddDate(0, 0, offsetDays)
 
 	return offsetDate.Format("2006-01-02")
-}
-
-// Handle season param: Season typically starts in Oct and ends in June
-func getSeason() int {
-	today := time.Now()
-	todayYear, todayMonth, _ := today.Date()
-	if todayMonth < time.August {
-		todayYear -= 1
-	}
-	return todayYear
 }
 
 // func GetGames() []Game {
