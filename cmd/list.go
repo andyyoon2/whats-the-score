@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -31,22 +30,14 @@ var (
 )
 
 func renderGame(g lib.Game) []string {
-	var homeScore string
-	var visitorScore string
-	// Hide scores if game hasn't started yet. Align it with 3-digit scores
-	if g.GetPeriod() == 0 {
-		homeScore = "   "
-		visitorScore = "   "
-	} else {
-		homeScore = fmt.Sprintf("%3d", g.GetHomeTeamScore())
-		visitorScore = fmt.Sprintf("%3d", g.GetVisitorTeamScore())
-	}
+	homeScore := g.DisplayScore("home")
+	visitorScore := g.DisplayScore("visitor")
 
 	home := teamCellStyle.Render(g.GetHomeTeamName()) + homeScore
 	visitor := teamCellStyle.Render(g.GetVisitorTeamName()) + visitorScore
 
 	// Bold the winner if the game has ended.
-	if g.GetStatus() == "Final" {
+	if g.CompletionStatus() == lib.Final {
 		if g.GetHomeTeamScore() > g.GetVisitorTeamScore() {
 			home = boldStyle.Render(home)
 		} else {
@@ -66,20 +57,11 @@ func renderGame(g lib.Game) []string {
 
 	// Display the game time.
 	var timeDisplay string
-	if g.GetStatus() == "Final" {
-		// Game is ended, check for OTs
-		timeDisplay = "Final"
-		if g.GetPeriod() > 4 {
-			timeDisplay += "/OT"
-		}
-		if g.GetPeriod() > 5 {
-			timeDisplay += strconv.Itoa(g.GetPeriod() - 4)
-		}
-	} else if g.GetPeriod() == 0 {
-		// Game hasn't started
+	if g.CompletionStatus() == lib.Final {
+		timeDisplay = g.DisplayEndStatus()
+	} else if g.CompletionStatus() == lib.NotStarted {
 		timeDisplay = datetime.Local().Format("03:04 PM")
 	} else {
-		// Game in progress
 		timeDisplay = g.GetInGameTime()
 	}
 
@@ -88,10 +70,6 @@ func renderGame(g lib.Game) []string {
 }
 
 func renderGamesTable(rows [][]string) {
-	// rows := [][]string{
-	// 	{visitor, timeDisplay},
-	// 	{home, dateDisplay},
-	// }
 	t := table.New().
 		Border(lipgloss.RoundedBorder()).
 		BorderColumn(false).
@@ -126,9 +104,8 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// league := cmd.Flag("league").Value.String()
-		// teams, err := lib.GetTeams(league)
-		league := "nba"
+		league := cmd.Flag("league").Value.String()
+
 		provider, err := lib.NewProvider(league)
 		if err != nil {
 			log.Fatalf("Error loading %s: %v", league, err)

@@ -10,13 +10,10 @@ import (
 
 // Dispatch an API request and return the response body
 func Get(path string) []byte {
-	// fmt.Printf("Would request %s\n", path)
-	// return []byte{}
-
 	fmt.Printf("Requesting %s\n", path)
 
 	client := &http.Client{}
-	req, err := http.NewRequest("GET", fmt.Sprintf("https://api.balldontlie.io/v1%s", path), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("https://api.balldontlie.io%s", path), nil)
 	if err != nil {
 		log.Fatal(err)
 	}

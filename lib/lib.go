@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -29,6 +30,10 @@ type ListResponse[T any] struct {
 	Data     []T          `json:"data"`
 	Metadata ListMetadata `json:"meta"`
 }
+
+// -----------------------------------------------------------------------------
+// Teams
+// -----------------------------------------------------------------------------
 
 type Team interface {
 	GetId() int
@@ -92,6 +97,18 @@ func (t MlbTeam) GetLocation() string {
 	return t.Location
 }
 
+// -----------------------------------------------------------------------------
+// Games
+// -----------------------------------------------------------------------------
+
+type GameCompletionStatus string
+
+const (
+	NotStarted GameCompletionStatus = "Not Started"
+	InProgress GameCompletionStatus = "In Progress"
+	Final      GameCompletionStatus = "Final"
+)
+
 type Game interface {
 	GetId() int
 	GetDatetime() string
@@ -103,6 +120,9 @@ type Game interface {
 	GetVisitorTeamName() string
 	GetHomeTeamScore() int
 	GetVisitorTeamScore() int
+	CompletionStatus() GameCompletionStatus
+	DisplayEndStatus() string
+	DisplayScore(t string) string
 }
 
 // https://docs.balldontlie.io/#games
@@ -171,6 +191,37 @@ func (g NbaGame) GetHomeTeamScore() int {
 func (g NbaGame) GetVisitorTeamScore() int {
 	return g.VisitorTeamScore
 }
+func (g NbaGame) CompletionStatus() GameCompletionStatus {
+	if g.Status == "Final" {
+		return Final
+	} else if g.Period == 0 {
+		return NotStarted
+	} else {
+		return InProgress
+	}
+}
+func (g NbaGame) DisplayEndStatus() string {
+	timeDisplay := "Final"
+	if g.GetPeriod() > 4 {
+		timeDisplay += "/OT"
+	}
+	if g.GetPeriod() > 5 {
+		timeDisplay += strconv.Itoa(g.GetPeriod() - 4)
+	}
+	return timeDisplay
+}
+
+// Display scores padded to 3-digits
+func (g NbaGame) DisplayScore(t string) string {
+	if g.CompletionStatus() == NotStarted {
+		return "   "
+	}
+	if t == "home" {
+		return fmt.Sprintf("%3d", g.GetHomeTeamScore())
+	} else {
+		return fmt.Sprintf("%3d", g.GetVisitorTeamScore())
+	}
+}
 
 type MlbGameTeamData struct {
 	Runs         int   `json:"runs"`
@@ -188,25 +239,25 @@ type MlbGameScoringPlay struct {
 }
 
 type MlbGame struct {
-	Id             int             `json:"id"`
-	HomeTeamName   string          `json:"home_team_name"`
-	AwayTeamName   string          `json:"away_team_name"`
-	HomeTeam       MlbTeam         `json:"home_team"`
-	AwayTeam       MlbTeam         `json:"away_team"`
-	Season         int             `json:"season"`
-	Postseason     bool            `json:"postseason"`
-	SeasonType     string          `json:"season_type"`
-	Date           string          `json:"date"`
-	HomeTeamData   MlbGameTeamData `json:"home_team_data"`
-	AwayTeamData   MlbGameTeamData `json:"away_team_data"`
-	Venue          string          `json:"venue"`
-	Attendance     int             `json:"attendance"`
-	ConferencePlay bool            `json:"conference_play"`
-	Status         string          `json:"status"`
-	Period         int             `json:"period"`
-	Clock          int             `json:"clock"`
-	DisplayClock   string          `json:"display_clock"`
-	ScoringSummary string          `json:"scoring_summary"`
+	Id             int                  `json:"id"`
+	HomeTeamName   string               `json:"home_team_name"`
+	AwayTeamName   string               `json:"away_team_name"`
+	HomeTeam       MlbTeam              `json:"home_team"`
+	AwayTeam       MlbTeam              `json:"away_team"`
+	Season         int                  `json:"season"`
+	Postseason     bool                 `json:"postseason"`
+	SeasonType     string               `json:"season_type"`
+	Date           string               `json:"date"`
+	HomeTeamData   MlbGameTeamData      `json:"home_team_data"`
+	AwayTeamData   MlbGameTeamData      `json:"away_team_data"`
+	Venue          string               `json:"venue"`
+	Attendance     int                  `json:"attendance"`
+	ConferencePlay bool                 `json:"conference_play"`
+	Status         string               `json:"status"`
+	Period         int                  `json:"period"`
+	Clock          int                  `json:"clock"`
+	DisplayClock   string               `json:"display_clock"`
+	ScoringSummary []MlbGameScoringPlay `json:"scoring_summary"`
 }
 
 func (g MlbGame) GetId() int {
@@ -228,10 +279,10 @@ func (g MlbGame) GetInGameTime() string {
 	return g.DisplayClock
 }
 func (g MlbGame) GetHomeTeamName() string {
-	return g.HomeTeamName
+	return g.HomeTeam.DisplayName
 }
 func (g MlbGame) GetVisitorTeamName() string {
-	return g.AwayTeamName
+	return g.AwayTeam.DisplayName
 }
 func (g MlbGame) GetHomeTeamScore() int {
 	return g.HomeTeamData.Runs
@@ -239,6 +290,37 @@ func (g MlbGame) GetHomeTeamScore() int {
 func (g MlbGame) GetVisitorTeamScore() int {
 	return g.AwayTeamData.Runs
 }
+func (g MlbGame) CompletionStatus() GameCompletionStatus {
+	if g.Status == "STATUS_FINAL" {
+		return Final
+	} else if g.Status == "STATUS_SCHEDULED" {
+		return NotStarted
+	} else {
+		return InProgress
+	}
+}
+func (g MlbGame) DisplayEndStatus() string {
+	if g.Period > 9 {
+		return fmt.Sprintf("Final/%d", g.Period)
+	}
+	return "Final"
+}
+
+// Display scores padded to 2-digits
+func (g MlbGame) DisplayScore(t string) string {
+	if g.CompletionStatus() == NotStarted {
+		return "  "
+	}
+	if t == "home" {
+		return fmt.Sprintf("%2d", g.GetHomeTeamScore())
+	} else {
+		return fmt.Sprintf("%2d", g.GetVisitorTeamScore())
+	}
+}
+
+// -----------------------------------------------------------------------------
+// Providers
+// -----------------------------------------------------------------------------
 
 type LeagueProvider interface {
 	Teams() ([]Team, error)
@@ -261,9 +343,8 @@ func (p NbaProvider) Teams() ([]Team, error) {
 }
 
 func (p NbaProvider) UpcomingGames() ([]Game, error) {
-	path := fmt.Sprintf("/games?dates[]=%s", getTodayDate())
+	path := fmt.Sprintf("/v1/games?dates[]=%s", getTodayDate())
 	gs := fetchNbaGames(path)
-	// Convert to []Game interface type
 	games := make([]Game, len(gs))
 	for i, g := range gs {
 		games[i] = g
@@ -272,9 +353,8 @@ func (p NbaProvider) UpcomingGames() ([]Game, error) {
 }
 
 func (p NbaProvider) UpcomingGamesForTeam(team Team) ([]Game, error) {
-	path := fmt.Sprintf("/games?team_ids[]=%d&start_date=%s&per_page=3", team.GetId(), getTodayDate())
+	path := fmt.Sprintf("/v1/games?team_ids[]=%d&start_date=%s&per_page=3", team.GetId(), getTodayDate())
 	gs := fetchNbaGames(path)
-	// Convert to []Game interface type
 	games := make([]Game, len(gs))
 	for i, g := range gs {
 		games[i] = g
@@ -294,43 +374,77 @@ func fetchNbaGames(path string) []NbaGame {
 	return g.Data
 }
 
+type MlbProvider struct{}
+
+func (p MlbProvider) Teams() ([]Team, error) {
+	var mlbTeams []MlbTeam
+	if err := json.Unmarshal(mlb, &mlbTeams); err != nil {
+		return nil, err
+	}
+	teams := make([]Team, len(mlbTeams))
+	for i, t := range mlbTeams {
+		teams[i] = t
+	}
+	return teams, nil
+}
+
+func (p MlbProvider) UpcomingGames() ([]Game, error) {
+	path := fmt.Sprintf("/mlb/v1/games?dates[]=%s", getTodayDate())
+	gs := fetchMlbGames(path)
+	games := make([]Game, len(gs))
+	for i, g := range gs {
+		games[i] = g
+	}
+	return games, nil
+}
+
+func (p MlbProvider) UpcomingGamesForTeam(team Team) ([]Game, error) {
+	nDays := 3
+	days := make([]string, 0, nDays)
+	days = append(days, getTodayDate())
+	for i := 1; i < nDays; i++ {
+		days = append(days, getTodayPlusOffsetDate(i))
+	}
+	fmt.Println(days)
+	daysParam := "dates[]=" + strings.Join(days, "&dates[]=")
+	fmt.Println(daysParam)
+
+	path := fmt.Sprintf("/mlb/v1/games?team_ids[]=%d&%s", team.GetId(), daysParam)
+	fmt.Println("Requesting path: " + path)
+	gs := fetchMlbGames(path)
+	games := make([]Game, len(gs))
+	for i, g := range gs {
+		games[i] = g
+	}
+	return games, nil
+}
+
+func fetchMlbGames(path string) []MlbGame {
+	data := Get(path)
+
+	var g ListResponse[MlbGame]
+	err := json.Unmarshal(data, &g)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return g.Data
+}
+
 func NewProvider(league string) (LeagueProvider, error) {
 	switch strings.ToLower(league) {
 	case "nba":
 		return NbaProvider{}, nil
-	// case "mlb":
-	// 	return MlbProvider{}, nil
+	case "mlb":
+		return MlbProvider{}, nil
 	default:
 		return nil, fmt.Errorf("Sorry, %s is not supported yet.", league)
 	}
 }
 
-func GetTeams(league string) ([]Team, error) {
-	switch strings.ToLower(league) {
-	case "nba":
-		var nbaTeams []NbaTeam
-		if err := json.Unmarshal(nba, &nbaTeams); err != nil {
-			return nil, err
-		}
-		teams := make([]Team, len(nbaTeams))
-		for i, t := range nbaTeams {
-			teams[i] = t
-		}
-		return teams, nil
-	case "mlb":
-		var mlbTeams []MlbTeam
-		if err := json.Unmarshal(mlb, &mlbTeams); err != nil {
-			return nil, err
-		}
-		teams := make([]Team, len(mlbTeams))
-		for i, t := range mlbTeams {
-			teams[i] = t
-		}
-		return teams, nil
-	default:
-		return nil, fmt.Errorf("Sorry, %s is not supported yet.", league)
-	}
-}
+// -----------------------------------------------------------------------------
+// Functions
+// -----------------------------------------------------------------------------
 
 // Build query parameters for API request
 // TODO: This doesn't quite work always to get the latest games, but it's good enough for now
@@ -379,42 +493,17 @@ func getSeason() int {
 	return todayYear
 }
 
-func fetchGames(path string) []Game {
-	data := Get(path)
+// func GetGames() []Game {
+// 	startDate, endDate, season := buildDateRanges(1)
 
-	var g ListResponse[Game]
-	err := json.Unmarshal(data, &g)
-	if err != nil {
-		log.Fatal(err)
-	}
+// 	path := fmt.Sprintf("/games?%s&%s&%s", startDate, endDate, season)
+// 	return fetchGames(path)
+// }
 
-	return g.Data
-}
+// func GetGamesForTeam(team NbaTeam) []Game {
+// 	teamIds := fmt.Sprintf("team_ids[]=%d", team.Id)
+// 	startDate, endDate, season := buildDateRanges(7)
 
-// Fetch today's games for all teams
-func GetUpcomingGames() []Game {
-	path := fmt.Sprintf("/games?dates[]=%s", getTodayDate())
-	return fetchGames(path)
-}
-
-// Fetch upcoming games for single team
-// TODO: Could support multiple teams here
-func GetUpcomingGamesForTeam(team Team) []Game {
-	path := fmt.Sprintf("/games?team_ids[]=%d&start_date=%s&per_page=3", team.GetId(), getTodayDate())
-	return fetchGames(path)
-}
-
-func GetGames() []Game {
-	startDate, endDate, season := buildDateRanges(1)
-
-	path := fmt.Sprintf("/games?%s&%s&%s", startDate, endDate, season)
-	return fetchGames(path)
-}
-
-func GetGamesForTeam(team NbaTeam) []Game {
-	teamIds := fmt.Sprintf("team_ids[]=%d", team.Id)
-	startDate, endDate, season := buildDateRanges(7)
-
-	path := fmt.Sprintf("/games?%s&%s&%s&%s", teamIds, startDate, endDate, season)
-	return fetchGames(path)
-}
+// 	path := fmt.Sprintf("/games?%s&%s&%s&%s", teamIds, startDate, endDate, season)
+// 	return fetchGames(path)
+// }
