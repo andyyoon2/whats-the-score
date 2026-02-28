@@ -1,6 +1,5 @@
 /*
 Copyright © 2026 Andy Yoon
-
 */
 package cmd
 
@@ -16,14 +15,18 @@ var cfgFile string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "whats-the-score",
-	Short: "A brief description of your application",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
+	Use:   "wts",
+	Short: "Check the scores without leaving your terminal",
+	Long: `What's the Score: Check the scores without leaving your terminal.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+Check on a specific team:
+
+  wts ls lakers
+
+List today's games around the league:
+
+  wts ls --league nba
+`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	// Run: func(cmd *cobra.Command, args []string) { },

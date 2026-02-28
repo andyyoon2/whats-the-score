@@ -94,15 +94,23 @@ func renderGamesTable(rows [][]string) {
 
 // listCmd represents the list command
 var listCmd = &cobra.Command{
-	Use:     "list",
+	Use:     "list [TEAM ...]",
 	Aliases: []string{"ls"},
-	Short:   "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Short:   "List scores by league or team",
+	Long: `List scores by league or team.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+If no team is given, lists today's games for all teams in the league.
+
+If a team is given, lists the upcoming schedule for that team. You can specify
+the team name by name, location, or abbreviation (case-insensitive).
+For example, all of these commands will resolve to Los Angeles Lakers:
+
+  wts ls lakers
+  wts ls "los angeles"
+  wts ls LAL
+
+If no league is given, we default somewhat arbitrarily to NBA.
+Currently supported leagues are: NBA, MLB. (case-insensitive)`,
 	Run: func(cmd *cobra.Command, args []string) {
 		league := cmd.Flag("league").Value.String()
 
@@ -124,6 +132,8 @@ to quickly create a Cobra application.`,
 				log.Fatalf("Error loading games: %v", err)
 			}
 		} else {
+			// TODO: Support multiple teams in args. If 2 teams are given and they are playing each other,
+			// we could show the expanded game details. Or, no, just use a flag that's better.
 			query := strings.ToLower(args[0])
 			for _, t := range teams {
 				if strings.ToLower(t.GetName()) == query || strings.ToLower(t.GetLocation()) == query || strings.ToLower(t.GetAbbreviation()) == query {
@@ -164,4 +174,7 @@ func init() {
 
 	// TODO: Support searching in all leagues if not given. We default somewhat arbitrarily to NBA.
 	listCmd.Flags().StringP("league", "l", "nba", "Filter games by league")
+
+	listCmd.Flags().StringP("history", "H", "", "List historical games")
+	listCmd.Flags().StringP("limit", "n", "", "Number of games to list (default all for league, 3 for team)")
 }
