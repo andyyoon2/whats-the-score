@@ -162,7 +162,7 @@ func (g NbaGame) GetInGameTime() string {
 func (g NbaGame) GetHomeTeamName() string {
 	return g.HomeTeam.GetFullName()
 }
-func (g NbaGame) GetVisitorTeam() string {
+func (g NbaGame) GetVisitorTeamName() string {
 	return g.VisitorTeam.GetFullName()
 }
 func (g NbaGame) GetHomeTeamScore() int {
@@ -238,6 +238,71 @@ func (g MlbGame) GetHomeTeamScore() int {
 }
 func (g MlbGame) GetVisitorTeamScore() int {
 	return g.AwayTeamData.Runs
+}
+
+type LeagueProvider interface {
+	Teams() ([]Team, error)
+	UpcomingGames() ([]Game, error)
+	UpcomingGamesForTeam(team Team) ([]Game, error)
+}
+
+type NbaProvider struct{}
+
+func (p NbaProvider) Teams() ([]Team, error) {
+	var nbaTeams []NbaTeam
+	if err := json.Unmarshal(nba, &nbaTeams); err != nil {
+		return nil, err
+	}
+	teams := make([]Team, len(nbaTeams))
+	for i, t := range nbaTeams {
+		teams[i] = t
+	}
+	return teams, nil
+}
+
+func (p NbaProvider) UpcomingGames() ([]Game, error) {
+	path := fmt.Sprintf("/games?dates[]=%s", getTodayDate())
+	gs := fetchNbaGames(path)
+	// Convert to []Game interface type
+	games := make([]Game, len(gs))
+	for i, g := range gs {
+		games[i] = g
+	}
+	return games, nil
+}
+
+func (p NbaProvider) UpcomingGamesForTeam(team Team) ([]Game, error) {
+	path := fmt.Sprintf("/games?team_ids[]=%d&start_date=%s&per_page=3", team.GetId(), getTodayDate())
+	gs := fetchNbaGames(path)
+	// Convert to []Game interface type
+	games := make([]Game, len(gs))
+	for i, g := range gs {
+		games[i] = g
+	}
+	return games, nil
+}
+
+func fetchNbaGames(path string) []NbaGame {
+	data := Get(path)
+
+	var g ListResponse[NbaGame]
+	err := json.Unmarshal(data, &g)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return g.Data
+}
+
+func NewProvider(league string) (LeagueProvider, error) {
+	switch strings.ToLower(league) {
+	case "nba":
+		return NbaProvider{}, nil
+	// case "mlb":
+	// 	return MlbProvider{}, nil
+	default:
+		return nil, fmt.Errorf("Sorry, %s is not supported yet.", league)
+	}
 }
 
 func GetTeams(league string) ([]Team, error) {

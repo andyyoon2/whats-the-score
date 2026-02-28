@@ -126,8 +126,15 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		league := cmd.Flag("league").Value.String()
-		teams, err := lib.GetTeams(league)
+		// league := cmd.Flag("league").Value.String()
+		// teams, err := lib.GetTeams(league)
+		league := "nba"
+		provider, err := lib.NewProvider(league)
+		if err != nil {
+			log.Fatalf("Error loading %s: %v", league, err)
+		}
+
+		teams, err := provider.Teams()
 		if err != nil {
 			log.Fatalf("Error loading teams for league %s: %v", league, err)
 		}
@@ -135,13 +142,19 @@ to quickly create a Cobra application.`,
 		var games []lib.Game
 		if len(args) == 0 {
 			// games = lib.GetGames()
-			games = lib.GetUpcomingGames()
+			games, err = provider.UpcomingGames()
+			if err != nil {
+				log.Fatalf("Error loading games: %v", err)
+			}
 		} else {
 			query := strings.ToLower(args[0])
 			for _, t := range teams {
 				if strings.ToLower(t.GetName()) == query || strings.ToLower(t.GetLocation()) == query || strings.ToLower(t.GetAbbreviation()) == query {
 					// games = lib.GetGamesForTeam(t)
-					games = lib.GetUpcomingGamesForTeam(t)
+					games, err = provider.UpcomingGamesForTeam(t)
+					if err != nil {
+						log.Fatalf("Error loading games: %v", err)
+					}
 				}
 			}
 		}
