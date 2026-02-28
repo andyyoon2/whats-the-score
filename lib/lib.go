@@ -115,13 +115,13 @@ type Game interface {
 	GetSeason() int
 	GetStatus() string
 	GetPeriod() int
-	GetInGameTime() string
 	GetHomeTeamName() string
 	GetVisitorTeamName() string
 	GetHomeTeamScore() int
 	GetVisitorTeamScore() int
 	CompletionStatus() GameCompletionStatus
 	DisplayEndStatus() string
+	DisplayTime() string
 	DisplayScore(t string) string
 }
 
@@ -176,9 +176,6 @@ func (g NbaGame) GetStatus() string {
 func (g NbaGame) GetPeriod() int {
 	return g.Period
 }
-func (g NbaGame) GetInGameTime() string {
-	return g.Time
-}
 func (g NbaGame) GetHomeTeamName() string {
 	return g.HomeTeam.GetFullName()
 }
@@ -209,6 +206,21 @@ func (g NbaGame) DisplayEndStatus() string {
 		timeDisplay += strconv.Itoa(g.GetPeriod() - 4)
 	}
 	return timeDisplay
+}
+
+func (g NbaGame) DisplayTime() string {
+	if g.CompletionStatus() == Final {
+		return g.DisplayEndStatus()
+	} else if g.CompletionStatus() == InProgress {
+		return g.Time
+	} else {
+		datetime, err := time.Parse(time.RFC3339, g.GetDatetime())
+		if err != nil {
+			log.Printf("[warning] Unable to parse date %s, %v", g.GetDatetime(), err)
+			return g.Date
+		}
+		return datetime.Local().Format("03:04 PM")
+	}
 }
 
 // Display scores padded to 3-digits
@@ -275,9 +287,6 @@ func (g MlbGame) GetStatus() string {
 func (g MlbGame) GetPeriod() int {
 	return g.Period
 }
-func (g MlbGame) GetInGameTime() string {
-	return g.DisplayClock
-}
 func (g MlbGame) GetHomeTeamName() string {
 	return g.HomeTeam.DisplayName
 }
@@ -304,6 +313,28 @@ func (g MlbGame) DisplayEndStatus() string {
 		return fmt.Sprintf("Final/%d", g.Period)
 	}
 	return "Final"
+}
+
+func (g MlbGame) DisplayTime() string {
+	if g.CompletionStatus() == Final {
+		return g.DisplayEndStatus()
+	} else if g.CompletionStatus() == InProgress {
+		// Get current inning based on number of inning scores
+		homeScores := len(g.HomeTeamData.InningScores)
+		awayScores := len(g.AwayTeamData.InningScores)
+		if awayScores > homeScores {
+			return fmt.Sprintf("Top %d", g.Period)
+		} else {
+			return fmt.Sprintf("Bot %d", g.Period)
+		}
+	} else {
+		datetime, err := time.Parse(time.RFC3339, g.GetDatetime())
+		if err != nil {
+			log.Printf("[warning] Unable to parse date %s, %v", g.GetDatetime(), err)
+			return g.Date
+		}
+		return datetime.Local().Format("03:04 PM")
+	}
 }
 
 // Display scores padded to 2-digits

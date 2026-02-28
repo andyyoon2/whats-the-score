@@ -56,14 +56,7 @@ func renderGame(g lib.Game) []string {
 	}
 
 	// Display the game time.
-	var timeDisplay string
-	if g.CompletionStatus() == lib.Final {
-		timeDisplay = g.DisplayEndStatus()
-	} else if g.CompletionStatus() == lib.NotStarted {
-		timeDisplay = datetime.Local().Format("03:04 PM")
-	} else {
-		timeDisplay = g.GetInGameTime()
-	}
+	timeDisplay := g.DisplayTime()
 
 	// Return strings to be rendered in a single table row
 	return []string{visitor + "\n" + home, timeDisplay + "\n" + dateDisplay}
