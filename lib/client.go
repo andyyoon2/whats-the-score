@@ -13,7 +13,7 @@ import (
 
 // Dispatch an API request and return the response body
 func Get(path string) []byte {
-	fmt.Printf("Requesting %s\n", path)
+	slog.Info(fmt.Sprintf("Requesting %s\n", path))
 
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", fmt.Sprintf("https://api.balldontlie.io%s", path), nil)
@@ -39,6 +39,6 @@ func Get(path string) []byte {
 		log.Fatal(err)
 	}
 
-	fmt.Println(string(body))
+	slog.Debug(string(body))
 	return body
 }

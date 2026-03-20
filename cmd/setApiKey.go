@@ -14,7 +14,7 @@ var setApiKeyCmd = &cobra.Command{
 	Short: "Set your balldontlie API key",
 	Long: `Sign up for a free API key at https://balldontlie.io, then save it with this command.
 
-Alternatively you can set the WTS_API_KEY environment variable or edit the wts config file.`,
+Alternatively you can set the WTS_API_KEY environment variable, or set api_key in the wts config file.`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		viper.Set("api_key", args[0])
