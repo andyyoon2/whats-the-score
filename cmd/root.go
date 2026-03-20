@@ -5,6 +5,7 @@ package cmd
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -12,6 +13,7 @@ import (
 )
 
 var cfgFile string
+var debug bool
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -30,6 +32,14 @@ List today's games around the league:
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	// Run: func(cmd *cobra.Command, args []string) { },
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		level := slog.LevelError
+		if debug {
+			level = slog.LevelDebug
+		}
+		logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level}))
+		slog.SetDefault(logger)
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -49,10 +59,11 @@ func init() {
 	// will be global for your application.
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.config/wts.toml)")
+	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Enable debug logging")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -72,9 +83,10 @@ func initConfig() {
 
 	viper.SetEnvPrefix("wts") // look for env vars with WTS_ prefix
 	viper.BindEnv("api_key")
+	viper.BindEnv("debug")
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+		slog.Debug(fmt.Sprintln("Using config file:", viper.ConfigFileUsed()))
 	}
 }

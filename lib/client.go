@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"log/slog"
 	"net/http"
+	"os"
 
 	"github.com/spf13/viper"
 )
@@ -20,7 +22,11 @@ func Get(path string) []byte {
 	}
 
 	key := viper.GetString("api_key")
-	fmt.Printf("Using API key: %s\n", key)
+	if key == "" {
+		slog.Error("API key not found. Run `wts set-api-key`.")
+		os.Exit(1)
+	}
+
 	req.Header.Add("Authorization", key)
 	resp, err := client.Do(req)
 	if err != nil {
