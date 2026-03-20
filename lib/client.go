@@ -5,7 +5,8 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
+
+	"github.com/spf13/viper"
 )
 
 // Dispatch an API request and return the response body
@@ -18,7 +19,9 @@ func Get(path string) []byte {
 		log.Fatal(err)
 	}
 
-	req.Header.Add("Authorization", os.Getenv("WTS_API_KEY"))
+	key := viper.GetString("api_key")
+	fmt.Printf("Using API key: %s\n", key)
+	req.Header.Add("Authorization", key)
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Fatal(err)
