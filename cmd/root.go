@@ -67,11 +67,11 @@ func initConfig() {
 
 		viper.AddConfigPath(home + "/.config")
 		viper.SetConfigType("toml")
-		viper.SetConfigName(".wts")
+		viper.SetConfigName("wts")
 	}
 
 	viper.SetEnvPrefix("wts") // look for env vars with WTS_ prefix
-	viper.AutomaticEnv()      // read in environment variables that match
+	viper.BindEnv("api_key")
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {

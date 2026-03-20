@@ -87,7 +87,7 @@ func renderGamesTable(rows [][]string) {
 
 // listCmd represents the list command
 var listCmd = &cobra.Command{
-	Use:     "list [TEAM ...]",
+	Use:     "list [TEAM]",
 	Aliases: []string{"ls"},
 	Short:   "List scores by league or team",
 	Long: `List scores by league or team.
@@ -102,7 +102,7 @@ For example, all of these commands will resolve to Los Angeles Lakers:
   wts ls "los angeles"
   wts ls LAL
 
-If no league is given, we default somewhat arbitrarily to NBA.
+If no league is given, we default to NBA.
 Currently supported leagues are: NBA, MLB. (case-insensitive)`,
 	Run: func(cmd *cobra.Command, args []string) {
 		league, err := cmd.Flags().GetString("league")
