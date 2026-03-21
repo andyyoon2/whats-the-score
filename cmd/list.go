@@ -5,7 +5,7 @@ package cmd
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"strings"
 	"time"
@@ -49,7 +49,7 @@ func renderGame(g lib.Game) []string {
 	var dateDisplay string
 	datetime, err := time.Parse(time.RFC3339, g.GetDatetime())
 	if err != nil {
-		log.Printf("[warning] Unable to parse date %s, %v", g.GetDatetime(), err)
+		slog.Warn(fmt.Sprintf("Unable to parse date %s, %v", g.GetDatetime(), err))
 		dateDisplay = g.GetDatetime()
 	} else {
 		dateDisplay = datetime.Local().Format("Mon Jan 02")
@@ -107,24 +107,24 @@ Currently supported leagues are: NBA, MLB. (case-insensitive)`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		league, err := cmd.Flags().GetString("league")
 		if err != nil {
-			log.Fatalf("Parsing error: %v", err)
+			slog.Error(fmt.Sprintf("Parsing error: %v", err))
 			return err
 		}
 		history, err := cmd.Flags().GetBool("history")
 		if err != nil {
-			log.Fatalf("Parsing error: %v", err)
+			slog.Error(fmt.Sprintf("Parsing error: %v", err))
 			return err
 		}
 
 		provider, err := lib.NewProvider(league)
 		if err != nil {
-			log.Fatalf("Error loading %s: %v", league, err)
+			slog.Error(fmt.Sprintf("Error loading %s: %v", league, err))
 			return err
 		}
 
 		teams, err := provider.Teams()
 		if err != nil {
-			log.Fatalf("Error loading teams for league %s: %v", league, err)
+			slog.Error(fmt.Sprintf("Error loading teams for league %s: %v", league, err))
 			return err
 		}
 
@@ -136,7 +136,7 @@ Currently supported leagues are: NBA, MLB. (case-insensitive)`,
 				games, err = provider.UpcomingGames()
 			}
 			if err != nil {
-				log.Fatalf("Error loading games: %v", err)
+				slog.Error(fmt.Sprintf("Error loading games: %v", err))
 				return err
 			}
 		} else {
@@ -149,7 +149,7 @@ Currently supported leagues are: NBA, MLB. (case-insensitive)`,
 						games, err = provider.UpcomingGamesForTeam(t)
 					}
 					if err != nil {
-						log.Fatalf("Error loading games: %v", err)
+						slog.Error(fmt.Sprintf("Error loading games: %v", err))
 						return err
 					}
 				}

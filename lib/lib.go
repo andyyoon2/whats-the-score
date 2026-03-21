@@ -388,7 +388,10 @@ func (p NbaProvider) CurrentSeason() int {
 
 func (p NbaProvider) UpcomingGames() ([]Game, error) {
 	path := fmt.Sprintf("/v1/games?dates[]=%s", getTodayDate())
-	gs := fetchNbaGames(path)
+	gs, err := fetchNbaGames(path)
+	if err != nil {
+		return nil, err
+	}
 	games := make([]Game, len(gs))
 	for i, g := range gs {
 		games[i] = g
@@ -398,7 +401,10 @@ func (p NbaProvider) UpcomingGames() ([]Game, error) {
 
 func (p NbaProvider) UpcomingGamesForTeam(team Team) ([]Game, error) {
 	path := fmt.Sprintf("/v1/games?team_ids[]=%d&start_date=%s&per_page=3", team.GetId(), getTodayDate())
-	gs := fetchNbaGames(path)
+	gs, err := fetchNbaGames(path)
+	if err != nil {
+		return nil, err
+	}
 	games := make([]Game, len(gs))
 	for i, g := range gs {
 		games[i] = g
@@ -413,7 +419,10 @@ func (p NbaProvider) HistoricalGames() ([]Game, error) {
 	season := p.CurrentSeason()
 
 	path := fmt.Sprintf("/v1/games?start_date=%s&end_date=%s&seasons[]=%d", startDate, endDate, season)
-	gs := fetchNbaGames(path)
+	gs, err := fetchNbaGames(path)
+	if err != nil {
+		return nil, err
+	}
 	games := make([]Game, len(gs))
 	for i, g := range gs {
 		games[i] = g
@@ -428,7 +437,10 @@ func (p NbaProvider) HistoricalGamesForTeam(t Team) ([]Game, error) {
 	season := p.CurrentSeason()
 
 	path := fmt.Sprintf("/v1/games?team_ids[]=%d&start_date=%s&end_date=%s&seasons[]=%d", t.GetId(), startDate, endDate, season)
-	gs := fetchNbaGames(path)
+	gs, err := fetchNbaGames(path)
+	if err != nil {
+		return nil, err
+	}
 	games := make([]Game, len(gs))
 	for i, g := range gs {
 		games[i] = g
@@ -436,17 +448,18 @@ func (p NbaProvider) HistoricalGamesForTeam(t Team) ([]Game, error) {
 	return games, nil
 }
 
-// TODO: Pass up error, follow the same patterns
-func fetchNbaGames(path string) []NbaGame {
-	data := Get(path)
-
-	var g ListResponse[NbaGame]
-	err := json.Unmarshal(data, &g)
+func fetchNbaGames(path string) ([]NbaGame, error) {
+	data, err := Get(path)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
-	return g.Data
+	var g ListResponse[NbaGame]
+	if err := json.Unmarshal(data, &g); err != nil {
+		return nil, err
+	}
+
+	return g.Data, nil
 }
 
 type MlbProvider struct{}
@@ -471,7 +484,10 @@ func (p MlbProvider) CurrentSeason() int {
 
 func (p MlbProvider) UpcomingGames() ([]Game, error) {
 	path := fmt.Sprintf("/mlb/v1/games?dates[]=%s", getTodayDate())
-	gs := fetchMlbGames(path)
+	gs, err := fetchMlbGames(path)
+	if err != nil {
+		return nil, err
+	}
 	games := make([]Game, len(gs))
 	for i, g := range gs {
 		games[i] = g
@@ -490,7 +506,10 @@ func (p MlbProvider) UpcomingGamesForTeam(team Team) ([]Game, error) {
 
 	path := fmt.Sprintf("/mlb/v1/games?team_ids[]=%d&%s", team.GetId(), daysParam)
 	fmt.Println("Requesting path: " + path)
-	gs := fetchMlbGames(path)
+	gs, err := fetchMlbGames(path)
+	if err != nil {
+		return nil, err
+	}
 	games := make([]Game, len(gs))
 	for i, g := range gs {
 		games[i] = g
@@ -504,7 +523,10 @@ func (p MlbProvider) HistoricalGames() ([]Game, error) {
 	season := p.CurrentSeason()
 
 	path := fmt.Sprintf("/mlb/v1/games?%s&seasons[]=%d", dateQueryParam, season)
-	gs := fetchMlbGames(path)
+	gs, err := fetchMlbGames(path)
+	if err != nil {
+		return nil, err
+	}
 	games := make([]Game, len(gs))
 	for i, g := range gs {
 		games[i] = g
@@ -518,7 +540,10 @@ func (p MlbProvider) HistoricalGamesForTeam(t Team) ([]Game, error) {
 	season := p.CurrentSeason()
 
 	path := fmt.Sprintf("/mlb/v1/games?team_ids[]=%d&%s&seasons[]=%d", t.GetId(), dateQueryParam, season)
-	gs := fetchMlbGames(path)
+	gs, err := fetchMlbGames(path)
+	if err != nil {
+		return nil, err
+	}
 	games := make([]Game, len(gs))
 	for i, g := range gs {
 		games[i] = g
@@ -526,16 +551,18 @@ func (p MlbProvider) HistoricalGamesForTeam(t Team) ([]Game, error) {
 	return games, nil
 }
 
-func fetchMlbGames(path string) []MlbGame {
-	data := Get(path)
-
-	var g ListResponse[MlbGame]
-	err := json.Unmarshal(data, &g)
+func fetchMlbGames(path string) ([]MlbGame, error) {
+	data, err := Get(path)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
-	return g.Data
+	var g ListResponse[MlbGame]
+	if err := json.Unmarshal(data, &g); err != nil {
+		return nil, err
+	}
+
+	return g.Data, nil
 }
 
 func NewProvider(league string) (LeagueProvider, error) {

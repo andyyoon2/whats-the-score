@@ -5,6 +5,7 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 
@@ -33,13 +34,17 @@ List today's games around the league:
 	// has an action associated with it:
 	// Run: func(cmd *cobra.Command, args []string) { },
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		// Don't log anything by default
 		level := slog.LevelError
+		writer := io.Discard
 		if debug {
 			level = slog.LevelDebug
+			writer = os.Stderr
 		}
-		logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level}))
+		logger := slog.New(slog.NewTextHandler(writer, &slog.HandlerOptions{Level: level}))
 		slog.SetDefault(logger)
 	},
+	SilenceUsage: true,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
