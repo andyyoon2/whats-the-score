@@ -104,24 +104,28 @@ For example, all of these commands will resolve to Los Angeles Lakers:
 
 If no league is given, we default to NBA.
 Currently supported leagues are: NBA, MLB. (case-insensitive)`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		league, err := cmd.Flags().GetString("league")
 		if err != nil {
 			log.Fatalf("Parsing error: %v", err)
+			return err
 		}
 		history, err := cmd.Flags().GetBool("history")
 		if err != nil {
 			log.Fatalf("Parsing error: %v", err)
+			return err
 		}
 
 		provider, err := lib.NewProvider(league)
 		if err != nil {
 			log.Fatalf("Error loading %s: %v", league, err)
+			return err
 		}
 
 		teams, err := provider.Teams()
 		if err != nil {
 			log.Fatalf("Error loading teams for league %s: %v", league, err)
+			return err
 		}
 
 		var games []lib.Game
@@ -133,10 +137,9 @@ Currently supported leagues are: NBA, MLB. (case-insensitive)`,
 			}
 			if err != nil {
 				log.Fatalf("Error loading games: %v", err)
+				return err
 			}
 		} else {
-			// TODO: Support multiple teams in args. If 2 teams are given and they are playing each other,
-			// we could show the expanded game details. Or, no, just use a flag that's better.
 			query := strings.ToLower(args[0])
 			for _, t := range teams {
 				if strings.ToLower(t.GetName()) == query || strings.ToLower(t.GetLocation()) == query || strings.ToLower(t.GetAbbreviation()) == query {
@@ -147,6 +150,7 @@ Currently supported leagues are: NBA, MLB. (case-insensitive)`,
 					}
 					if err != nil {
 						log.Fatalf("Error loading games: %v", err)
+						return err
 					}
 				}
 			}
@@ -154,7 +158,7 @@ Currently supported leagues are: NBA, MLB. (case-insensitive)`,
 
 		if len(games) == 0 {
 			fmt.Println("No recent games found")
-			return
+			return nil
 		}
 
 		var rows [][]string
@@ -163,6 +167,7 @@ Currently supported leagues are: NBA, MLB. (case-insensitive)`,
 		}
 
 		renderGamesTable(rows)
+		return nil
 	},
 }
 
@@ -178,11 +183,7 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 
-	// TODO: Support searching in all leagues if not given. We default somewhat arbitrarily to NBA.
+	// TODO: Support searching by team in all leagues if not given.
 	listCmd.Flags().StringP("league", "l", "nba", "Filter games by league")
-
-	// TODO: Implement these
 	listCmd.Flags().BoolP("history", "H", false, "List historical games")
-	// listCmd.Flags().StringP("limit", "n", "", "Number of games to list (default all for league, 3 for team)")
-	// some sort of date filter. Either number of days or a date range.
 }

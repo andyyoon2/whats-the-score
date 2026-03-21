@@ -8,7 +8,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-// setApiKeyCmd represents the setApiKey command
 var setApiKeyCmd = &cobra.Command{
 	Use:   "set-api-key [KEY]",
 	Short: "Set your balldontlie API key",
