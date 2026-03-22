@@ -22,13 +22,15 @@ var rootCmd = &cobra.Command{
 	Short: "Check the scores without leaving your terminal",
 	Long: `What's the Score: Check the scores without leaving your terminal.
 
-Check on a specific team:
+List today's games around the league:
+  wts ls
 
+Check on a specific team:
   wts ls lakers
 
-List today's games around the league:
-
-  wts ls --league nba
+WTS requires an API key to BALLDONTLIE. Sign up for a free key at
+https://balldontlie.io/ and save it using:
+  wts set-api-key
 `,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
@@ -44,7 +46,6 @@ List today's games around the league:
 		logger := slog.New(slog.NewTextHandler(writer, &slog.HandlerOptions{Level: level}))
 		slog.SetDefault(logger)
 	},
-	SilenceUsage: true,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -65,6 +66,9 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.config/wts.toml)")
 	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Enable debug logging")
+
+	rootCmd.CompletionOptions.DisableDefaultCmd = true
+	rootCmd.SetHelpCommand(&cobra.Command{Hidden: true}) // hide the default "help" subcommand
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.

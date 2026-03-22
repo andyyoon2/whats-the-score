@@ -92,18 +92,20 @@ var listCmd = &cobra.Command{
 	Short:   "List scores by league or team",
 	Long: `List scores by league or team.
 
-If no team is given, lists today's games for all teams in the league.
+List today's games for all teams in the league:
+  wts ls
 
-If a team is given, lists the upcoming schedule for that team. You can specify
-the team name by name, location, or abbreviation (case-insensitive).
-For example, all of these commands will resolve to Los Angeles Lakers:
-
+List the upcoming schedule for a team:
   wts ls lakers
-  wts ls "los angeles"
-  wts ls LAL
+  wts ls --league mlb dodgers
 
-If no league is given, we default to NBA.
-Currently supported leagues are: NBA, MLB. (case-insensitive)`,
+You can specify the team by name, location, or abbreviation:
+  wts ls spurs  --> San Antonio Spurs
+  wts ls denver --> Denver Nuggets
+  wts ls bos    --> Boston Celtics
+
+If no league is given, we default to NBA. Currently supported leagues: NBA, MLB.
+All args are case-insensitive.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		league, err := cmd.Flags().GetString("league")
 		if err != nil {
@@ -169,6 +171,7 @@ Currently supported leagues are: NBA, MLB. (case-insensitive)`,
 		renderGamesTable(rows)
 		return nil
 	},
+	SilenceUsage: true,
 }
 
 func init() {
@@ -184,6 +187,6 @@ func init() {
 	// is called directly, e.g.:
 
 	// TODO: Support searching by team in all leagues if not given.
-	listCmd.Flags().StringP("league", "l", "nba", "Filter games by league")
+	listCmd.Flags().StringP("league", "l", "nba", "Filter by league")
 	listCmd.Flags().BoolP("history", "H", false, "List historical games")
 }
