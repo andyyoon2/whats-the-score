@@ -1,0 +1,39 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    # Exclude 32-bit and other combos we don't care about
+    ignore:
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s -w
+
+archives:
+  - formats:
+      - tar.gz
+    # Use zip for Windows
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  disable: true
