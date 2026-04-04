@@ -6,7 +6,8 @@ before:
     - go mod tidy
 
 builds:
-  - env:
+  - binary: wts
+    env:
       - CGO_ENABLED=0
     goos:
       - linux
@@ -32,8 +33,16 @@ archives:
           - zip
     name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
 
-checksum:
-  name_template: "checksums.txt"
-
 changelog:
   disable: true
+
+brews:
+  - name: whats-the-score
+    repository:
+      owner: andyyoon2
+      name: homebrew-whats-the-score
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    homepage: "https://github.com/andyyoon2/whats-the-score"
+    description: "Check the scores without leaving your terminal."
+    install: |
+      bin.install "wts"
