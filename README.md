@@ -1,5 +1,8 @@
 # What's the Score
 
+<img width="360" height="230" alt="wts ls" src="https://github.com/user-attachments/assets/930d3655-cee3-442b-a784-87d8c89f81e1" />
+<img width="360" height="230" alt="wts ls -H okc" src="https://github.com/user-attachments/assets/a1979583-987c-4a21-bacf-d29b7813b08b" />
+
 ## Usage
 
 ```
