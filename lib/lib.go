@@ -4,7 +4,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"strconv"
 	"strings"
 	"time"
@@ -216,7 +216,7 @@ func (g NbaGame) DisplayTime() string {
 	} else {
 		datetime, err := time.Parse(time.RFC3339, g.GetDatetime())
 		if err != nil {
-			log.Printf("[warning] Unable to parse date %s, %v", g.GetDatetime(), err)
+			slog.Warn("Unable to parse date %s, %v", g.GetDatetime(), err)
 			return g.Date
 		}
 		return datetime.Local().Format("03:04 PM")
@@ -330,7 +330,7 @@ func (g MlbGame) DisplayTime() string {
 	} else {
 		datetime, err := time.Parse(time.RFC3339, g.GetDatetime())
 		if err != nil {
-			log.Printf("[warning] Unable to parse date %s, %v", g.GetDatetime(), err)
+			slog.Warn("Unable to parse date %s, %v", g.GetDatetime(), err)
 			return g.Date
 		}
 		return datetime.Local().Format("03:04 PM")
@@ -415,7 +415,7 @@ func (p NbaProvider) UpcomingGamesForTeam(team Team) ([]Game, error) {
 func (p NbaProvider) HistoricalGames() ([]Game, error) {
 	// BALLDONTLIE doesn't let us sort by date desc. So we just get the last 2 days as a rough estimate.
 	startDate := getTodayPlusOffsetDate(-2)
-	endDate := getTodayDate()
+	endDate := getTodayPlusOffsetDate(-1)
 	season := p.CurrentSeason()
 
 	path := fmt.Sprintf("/v1/games?start_date=%s&end_date=%s&seasons[]=%d", startDate, endDate, season)
@@ -505,7 +505,6 @@ func (p MlbProvider) UpcomingGamesForTeam(team Team) ([]Game, error) {
 	daysParam := "dates[]=" + strings.Join(days, "&dates[]=")
 
 	path := fmt.Sprintf("/mlb/v1/games?team_ids[]=%d&%s", team.GetId(), daysParam)
-	fmt.Println("Requesting path: " + path)
 	gs, err := fetchMlbGames(path)
 	if err != nil {
 		return nil, err
@@ -518,8 +517,8 @@ func (p MlbProvider) UpcomingGamesForTeam(team Team) ([]Game, error) {
 }
 
 func (p MlbProvider) HistoricalGames() ([]Game, error) {
-	// BALLDONTLIE doesn't let us sort by date desc. So we just get the last 2 days as a rough estimate.
-	dateQueryParam := makeMlbDateRangeQueryParam(-2, 2)
+	// BALLDONTLIE doesn't let us sort by date desc. So we just use yesterday as a rough estimate.
+	dateQueryParam := makeMlbDateRangeQueryParam(-1, 1)
 	season := p.CurrentSeason()
 
 	path := fmt.Sprintf("/mlb/v1/games?%s&seasons[]=%d", dateQueryParam, season)
@@ -580,30 +579,6 @@ func NewProvider(league string) (LeagueProvider, error) {
 // Functions
 // -----------------------------------------------------------------------------
 
-// Build query parameters for API request
-// TODO: This doesn't quite work always to get the latest games, but it's good enough for now
-func buildDateRanges(lookback int) (string, string, string) {
-	// NOTE: When formatting strings, you need to describe the reference date
-	// https://pkg.go.dev/time#example-Time.Format
-	//	Jan 2 15:04:05 2006 MST
-	// An easy way to remember this value is that it holds, when presented
-	// in this order, the values (lined up with the elements above):
-	//	  1 2  3  4  5    6  -7
-	today := time.Now()
-	lastWeek := today.AddDate(0, 0, -lookback)
-	startDate := fmt.Sprintf("start_date=%s", lastWeek.Format("2006-01-02"))
-	endDate := fmt.Sprintf("end_date=%s", today.Format("2006-01-02"))
-
-	// Handle season param: Season typically starts in Oct and ends in June
-	todayYear, todayMonth, _ := today.Date()
-	if todayMonth < time.August {
-		todayYear -= 1
-	}
-	season := fmt.Sprintf("seasons[]=%d", todayYear)
-
-	return startDate, endDate, season
-}
-
 // To query MLB date ranges, we have to pass each date one at a time.
 func makeMlbDateRangeQueryParam(startOffsetFromToday int, numDays int) string {
 	days := make([]string, 0, numDays)
@@ -626,18 +601,3 @@ func getTodayPlusOffsetDate(offsetDays int) string {
 
 	return offsetDate.Format("2006-01-02")
 }
-
-// func GetGames() []Game {
-// 	startDate, endDate, season := buildDateRanges(1)
-
-// 	path := fmt.Sprintf("/games?%s&%s&%s", startDate, endDate, season)
-// 	return fetchGames(path)
-// }
-
-// func GetGamesForTeam(team NbaTeam) []Game {
-// 	teamIds := fmt.Sprintf("team_ids[]=%d", team.Id)
-// 	startDate, endDate, season := buildDateRanges(7)
-
-// 	path := fmt.Sprintf("/games?%s&%s&%s&%s", teamIds, startDate, endDate, season)
-// 	return fetchGames(path)
-// }
