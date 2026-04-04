@@ -36,7 +36,7 @@ archives:
 changelog:
   disable: true
 
-brews:
+homebrew_casks:
   - name: whats-the-score
     repository:
       owner: andyyoon2
@@ -46,3 +46,13 @@ brews:
     description: "Check the scores without leaving your terminal."
     install: |
       bin.install "wts"
+    url:
+      verified: github.com/andyyoon2/whats-the-score
+
+    # Optional: if your app/binary isn't signed and notarized, you'll need this:
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/wts"]
+          end
