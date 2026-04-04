@@ -35,7 +35,7 @@ Use "wts [command] --help" for more information about a command.
 ### Homebrew
 
 ```
-brew tap andyyoon/whats-the-score
+brew tap andyyoon2/whats-the-score
 brew install whats-the-score
 wts
 ```
